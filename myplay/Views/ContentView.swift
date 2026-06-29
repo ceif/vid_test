@@ -47,91 +47,11 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // ✅ PLAYER NATIVO COM SUPORTE A PiP E FULLSCREEN
-                if let player = player {
-                    PlayerViewController(
-                        player: player,
-                        isReady: isReady,
-                        isLoading: isLoading
-                    )
-                    .frame(height: isFullscreen ? UIScreen.main.bounds.height : UIScreen.main.bounds.height * 0.35)
-                    .padding(.horizontal, isFullscreen ? 0 : 16)
-                    .overlay(
-                        // ✅ INDICADOR DE CARREGAMENTO
-                        Group {
-                            if isLoading || !isReady {
-                                VStack(spacing: 12) {
-                                    ProgressView()
-                                        .scaleEffect(1.5)
-                                        .tint(.white)
-                                    Text(isLoading ? "A obter licença..." : "A carregar...")
-                                        .font(.caption)
-                                        .foregroundColor(.white)
-                                }
-                                .padding(20)
-                                .background(Color.black.opacity(0.7))
-                                .cornerRadius(12)
-                            }
-                        }
-                    )
-                    .onTapGesture(count: 2) {
-                        // ✅ DUPLO TOQUE PARA FULLSCREEN
-                        toggleFullscreen()
-                    }
-                } else {
-                    VStack(spacing: 16) {
-                        Image(systemName: "tv")
-                            .font(.system(size: 50))
-                            .foregroundColor(.gray)
-                        Text("Selecione um canal")
-                            .font(.headline)
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(height: UIScreen.main.bounds.height * 0.35)
-                    .frame(maxWidth: .infinity)
-                    .background(Color.gray.opacity(0.1))
-                    .padding(.horizontal)
-                }
+                // ✅ PLAYER VIEW
+                playerView
                 
-                // ✅ CONTROLES DO PLAYER (apenas se houver player)
-                if player != nil {
-                    HStack {
-                        // Botão Play/Pause
-                        Button(action: togglePlayPause) {
-                            HStack {
-                                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                                Text(isPlaying ? "Pausar" : "Reproduzir")
-                            }
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 10)
-                            .background(isReady ? Color.blue : Color.gray)
-                            .cornerRadius(25)
-                        }
-                        .disabled(!isReady)
-                        
-                        Spacer()
-                        
-                        // ✅ Nome do canal
-                        if let canal = selectedCanal {
-                            Text("📺 \(canal.nome)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .padding(.trailing, 8)
-                        }
-                        
-                        // ✅ BOTÃO DE FULLSCREEN
-                        Button(action: toggleFullscreen) {
-                            Image(systemName: isFullscreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
-                                .font(.system(size: 22))
-                                .foregroundColor(.blue)
-                        }
-                        .padding(.trailing, 8)
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 8)
-                }
+                // ✅ CONTROLES
+                controlsView
                 
                 Divider()
                     .padding(.vertical, 8)
@@ -187,28 +107,128 @@ struct ContentView: View {
                 } else {
                     UIApplication.orientationLock = .portrait
                 }
+                // ✅ iOS 16+ - atualiza orientação
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                    windowScene.windows.first?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+                }
             }
+        }
+    }
+    
+    // ✅ VIEW DO PLAYER (separada para facilitar compilação)
+    @ViewBuilder
+    private var playerView: some View {
+        if let player = player {
+            PlayerViewController(
+                player: player,
+                isReady: isReady,
+                isLoading: isLoading
+            )
+            .frame(height: isFullscreen ? UIScreen.main.bounds.height : UIScreen.main.bounds.height * 0.35)
+            .padding(.horizontal, isFullscreen ? 0 : 16)
+            .overlay(loadingOverlay)
+            .onTapGesture(count: 2) {
+                toggleFullscreen()
+            }
+        } else {
+            emptyPlayerView
+        }
+    }
+    
+    // ✅ OVERLAY DE CARREGAMENTO
+    @ViewBuilder
+    private var loadingOverlay: some View {
+        if isLoading || !isReady {
+            VStack(spacing: 12) {
+                ProgressView()
+                    .scaleEffect(1.5)
+                    .tint(.white)
+                Text(isLoading ? "A obter licença..." : "A carregar...")
+                    .font(.caption)
+                    .foregroundColor(.white)
+            }
+            .padding(20)
+            .background(Color.black.opacity(0.7))
+            .cornerRadius(12)
+        }
+    }
+    
+    // ✅ VIEW QUANDO NÃO HÁ PLAYER
+    @ViewBuilder
+    private var emptyPlayerView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "tv")
+                .font(.system(size: 50))
+                .foregroundColor(.gray)
+            Text("Selecione um canal")
+                .font(.headline)
+                .foregroundColor(.secondary)
+        }
+        .frame(height: UIScreen.main.bounds.height * 0.35)
+        .frame(maxWidth: .infinity)
+        .background(Color.gray.opacity(0.1))
+        .padding(.horizontal)
+    }
+    
+    // ✅ CONTROLES DO PLAYER
+    @ViewBuilder
+    private var controlsView: some View {
+        if player != nil {
+            HStack {
+                // Botão Play/Pause
+                Button(action: togglePlayPause) {
+                    HStack {
+                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                        Text(isPlaying ? "Pausar" : "Reproduzir")
+                    }
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(isReady ? Color.blue : Color.gray)
+                    .cornerRadius(25)
+                }
+                .disabled(!isReady)
+                
+                Spacer()
+                
+                if let canal = selectedCanal {
+                    Text("📺 \(canal.nome)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.trailing, 8)
+                }
+                
+                // ✅ BOTÃO DE FULLSCREEN
+                Button(action: toggleFullscreen) {
+                    Image(systemName: isFullscreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                        .font(.system(size: 22))
+                        .foregroundColor(.blue)
+                }
+                .padding(.trailing, 8)
+            }
+            .padding(.horizontal)
+            .padding(.top, 8)
         }
     }
     
     // MARK: - Funções
     
-    // ✅ TOGGLE FULLSCREEN
     private func toggleFullscreen() {
         withAnimation(.easeInOut(duration: 0.3)) {
             isFullscreen.toggle()
             
-            // ✅ Muda a orientação
+            // ✅ Força a orientação
             if isFullscreen {
-                // Força landscape
                 UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
             } else {
-                // Volta para portrait
                 UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
             }
             
-            // ✅ Atualiza a UI
-            UIViewController.attemptRotationToDeviceOrientation()
+            // ✅ iOS 16+ - atualiza orientação
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                windowScene.windows.first?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+            }
         }
     }
     
@@ -375,7 +395,7 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Delegate FairPlay (mesmo código existente)
+// MARK: - Delegate FairPlay (mesmo código)
 class SimpleFairPlayDelegate: NSObject, AVContentKeySessionDelegate {
     private let certificateURL: URL
     private let licenseURL: URL
@@ -518,12 +538,5 @@ class SimpleFairPlayDelegate: NSObject, AVContentKeySessionDelegate {
         
         print("⚠️ Nenhum campo de CKC encontrado, retornando JSON inteiro")
         return data
-    }
-}
-
-// MARK: - Preview
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
     }
 }
