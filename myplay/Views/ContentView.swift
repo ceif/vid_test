@@ -146,7 +146,7 @@ struct ContentView: View {
                 isLoading: isLoading
             )
             .frame(height: playerHeight)
-            .padding(.horizontal, isFullscreen ? 0 : 1)
+            .padding(.horizontal, isFullscreen ? 0 : 0)
             //.overlay(loadingOverlay)
             .onTapGesture(count: 2) {
                 toggleFullscreen()
