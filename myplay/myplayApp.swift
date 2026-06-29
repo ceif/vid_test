@@ -5,16 +5,28 @@ struct myplayApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .onAppear {
-                    // ✅ Permite todas as orientações quando em fullscreen
-                }
         }
     }
 }
 
-// ✅ EXTENSÃO PARA CONTROLAR ORIENTAÇÃO
+// ✅ CORRIGIDO: Controlador de Orientação
+class OrientationManager: ObservableObject {
+    static let shared = OrientationManager()
+    
+    @Published var orientationLock: UIInterfaceOrientationMask = .portrait
+    
+    func lockOrientation(_ orientation: UIInterfaceOrientationMask) {
+        orientationLock = orientation
+        // ✅ iOS 16+ - notifica a UI para atualizar
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            windowScene.windows.first?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+        }
+    }
+}
+
+// ✅ CORRIGIDO: UIViewController extension
 extension UIViewController {
-    open override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        return UIApplication.orientationLock
+    @objc dynamic var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        return OrientationManager.shared.orientationLock
     }
 }
