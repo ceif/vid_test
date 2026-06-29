@@ -6,14 +6,13 @@ class CanaisService: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    // ✅ Agora recebe a URL por parâmetro
-    internal var canaisURL: String
+    // ✅ PROPRIEDADE PÚBLICA PARA LEITURA
+    private(set) var canaisURL: String
     
     init(canaisURL: String) {
         self.canaisURL = canaisURL
     }
     
-    // ✅ Método para atualizar a URL
     func atualizarURL(_ novaURL: String) {
         canaisURL = novaURL
     }
@@ -43,7 +42,6 @@ class CanaisService: ObservableObject {
                     return
                 }
                 
-                // Debug: Mostra o JSON recebido
                 if let jsonString = String(data: data, encoding: .utf8) {
                     print("📡 JSON recebido: \(jsonString.prefix(200))...")
                 }
