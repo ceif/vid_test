@@ -12,14 +12,14 @@ struct PlayerViewController: UIViewControllerRepresentable {
         
         // ✅ ATIVA O PICTURE-IN-PICTURE
         controller.allowsPictureInPicturePlayback = true
-        
+        controller.canStartPictureInPictureAutomaticallyFromInline = true
         // ✅ INICIA PiP AUTOMATICAMENTE AO IR PARA SEGUNDO PLANO (iOS 14.2+)
-        if #available(iOS 14.2, *) {
-            controller.canStartPictureInPictureAutomaticallyFromInline = true
-        }
+    //    if #available(iOS 14.2, *) {
+    //        controller.canStartPictureInPictureAutomaticallyFromInline = true
+    //    }
         
         // ✅ CONFIGURAÇÕES VISUAIS
-        controller.videoGravity = .resizeAspect
+        controller.videoGravity = .resizeAspectFill
         controller.showsPlaybackControls = true
         
         // ✅ PERMITE FULLSCREEN
