@@ -2,13 +2,26 @@ import SwiftUI
 import AVKit
 import Combine
 
+// ✅ EXTENSÃO PARA OBTER TAMANHO DA TELA DE FORMA SEGURA
+extension View {
+    func screenHeight() -> CGFloat {
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            return windowScene.screen.bounds.height
+        }
+        return UIScreen.main.bounds.height // Fallback
+    }
+    
+    func screenWidth() -> CGFloat {
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            return windowScene.screen.bounds.width
+        }
+        return UIScreen.main.bounds.width // Fallback
+    }
+}
+
 // ✅ EXTENSÃO PARA CONTROLAR ORIENTAÇÃO
 extension UIApplication {
     static var orientationLock = UIInterfaceOrientationMask.portrait
-    
-    func setOrientationLock(_ lock: UIInterfaceOrientationMask) {
-        UIApplication.orientationLock = lock
-    }
 }
 
 struct ContentView: View {
@@ -38,6 +51,10 @@ struct ContentView: View {
     @State private var selectedCanal: Canal?
     @State private var currentVideoURL: String = ""
     
+    // MARK: - Dimensões da tela
+    @State private var screenHeight: CGFloat = 0
+    @State private var screenWidth: CGFloat = 0
+    
     // MARK: - Inicialização
     init() {
         let url = UserDefaults.standard.string(forKey: "canaisURL") ?? "http://myney/canais.json"
@@ -45,93 +62,97 @@ struct ContentView: View {
     }
     
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // ✅ PLAYER VIEW
-                playerView
-                
-                // ✅ CONTROLES
-                controlsView
-                
-                Divider()
-                    .padding(.vertical, 8)
-                
-                // Grid de Canais
-                CanalGridView(
-                    viewModel: canaisViewModel,
-                    onCanalSelected: { canal in
-                        selecionarCanal(canal)
-                    }
-                )
-                .padding(.top, 4)
-            }
-            .navigationTitle("📺 TV")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: { showSettings.toggle() }) {
-                        Image(systemName: "gear")
-                    }
+        GeometryReader { geometry in
+            NavigationStack {
+                VStack(spacing: 0) {
+                    // ✅ PLAYER VIEW
+                    playerView(height: geometry.size.height)
+                    
+                    // ✅ CONTROLES
+                    controlsView
+                    
+                    Divider()
+                        .padding(.vertical, 8)
+                    
+                    // Grid de Canais
+                    CanalGridView(
+                        viewModel: canaisViewModel,
+                        onCanalSelected: { canal in
+                            selecionarCanal(canal)
+                        }
+                    )
+                    .padding(.top, 4)
                 }
-            }
-            .sheet(isPresented: $showSettings) {
-                SettingsView()
-                    .onDisappear {
-                        let novaURL = UserDefaults.standard.string(forKey: "canaisURL") ?? "http://myney/canais.json"
-                        canaisViewModel.verificarEAtualizarURL(novaURL)
-                        
-                        if let canal = selectedCanal {
-                            reloadPlayer(with: canal)
+                .navigationTitle("📺 TV")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(action: { showSettings.toggle() }) {
+                            Image(systemName: "gear")
                         }
                     }
-            }
-            .alert("Erro", isPresented: $showError) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(errorMessage)
-            }
-            .onAppear {
-                carregarConfiguracoes()
-                canaisViewModel.carregarCanais()
-            }
-            .onDisappear {
-                player?.pause()
-                contentKeySession = nil
-                fairPlayDelegate = nil
-                cancellables.removeAll()
-            }
-            // ✅ SUPORTA ORIENTAÇÃO EM FULLSCREEN
-            .onChange(of: isFullscreen) { newValue in
-                if newValue {
-                    UIApplication.orientationLock = .all
-                } else {
-                    UIApplication.orientationLock = .portrait
                 }
-                // ✅ iOS 16+ - atualiza orientação
-                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                    windowScene.windows.first?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+                .sheet(isPresented: $showSettings) {
+                    SettingsView()
+                        .onDisappear {
+                            let novaURL = UserDefaults.standard.string(forKey: "canaisURL") ?? "http://myney/canais.json"
+                            canaisViewModel.verificarEAtualizarURL(novaURL)
+                            
+                            if let canal = selectedCanal {
+                                reloadPlayer(with: canal)
+                            }
+                        }
+                }
+                .alert("Erro", isPresented: $showError) {
+                    Button("OK", role: .cancel) { }
+                } message: {
+                    Text(errorMessage)
+                }
+                .onAppear {
+                    carregarConfiguracoes()
+                    canaisViewModel.carregarCanais()
+                }
+                .onDisappear {
+                    player?.pause()
+                    contentKeySession = nil
+                    fairPlayDelegate = nil
+                    cancellables.removeAll()
+                }
+                // ✅ SUPORTA ORIENTAÇÃO EM FULLSCREEN
+                .onChange(of: isFullscreen) { newValue in
+                    if newValue {
+                        UIApplication.orientationLock = .all
+                    } else {
+                        UIApplication.orientationLock = .portrait
+                    }
+                    // ✅ iOS 16+ - atualiza orientação
+                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                        windowScene.windows.first?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+                    }
                 }
             }
         }
     }
     
-    // ✅ VIEW DO PLAYER (separada para facilitar compilação)
+    // ✅ VIEW DO PLAYER
     @ViewBuilder
-    private var playerView: some View {
+    private func playerView(height: CGFloat) -> some View {
+        let playerHeight = isFullscreen ? height : height * 0.35
+        
         if let player = player {
             PlayerViewController(
                 player: player,
                 isReady: isReady,
                 isLoading: isLoading
             )
-            .frame(height: isFullscreen ? UIScreen.main.bounds.height : UIScreen.main.bounds.height * 0.35)
+            .frame(height: playerHeight)
             .padding(.horizontal, isFullscreen ? 0 : 16)
             .overlay(loadingOverlay)
             .onTapGesture(count: 2) {
                 toggleFullscreen()
             }
         } else {
-            emptyPlayerView
+            emptyPlayerView(height: playerHeight)
         }
     }
     
@@ -155,7 +176,7 @@ struct ContentView: View {
     
     // ✅ VIEW QUANDO NÃO HÁ PLAYER
     @ViewBuilder
-    private var emptyPlayerView: some View {
+    private func emptyPlayerView(height: CGFloat) -> some View {
         VStack(spacing: 16) {
             Image(systemName: "tv")
                 .font(.system(size: 50))
@@ -164,7 +185,7 @@ struct ContentView: View {
                 .font(.headline)
                 .foregroundColor(.secondary)
         }
-        .frame(height: UIScreen.main.bounds.height * 0.35)
+        .frame(height: height)
         .frame(maxWidth: .infinity)
         .background(Color.gray.opacity(0.1))
         .padding(.horizontal)
