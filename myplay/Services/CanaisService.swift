@@ -7,7 +7,7 @@ class CanaisService: ObservableObject {
     @Published var errorMessage: String?
     
     // ✅ Agora recebe a URL por parâmetro
-    private var canaisURL: String
+    internal var canaisURL: String
     
     init(canaisURL: String) {
         self.canaisURL = canaisURL
