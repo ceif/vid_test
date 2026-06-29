@@ -69,7 +69,7 @@ struct ContentView: View {
                     playerView(height: geometry.size.height)
                     
                     // ✅ CONTROLES
-                    controlsView
+                    //controlsView
                     
                     Divider()
                         .padding(.vertical, 8)
@@ -83,7 +83,7 @@ struct ContentView: View {
                     )
                     .padding(.top, 4)
                 }
-                .navigationTitle("📺 TV")
+                .navigationTitle("MyTV")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -146,8 +146,8 @@ struct ContentView: View {
                 isLoading: isLoading
             )
             .frame(height: playerHeight)
-            .padding(.horizontal, isFullscreen ? 0 : 16)
-            .overlay(loadingOverlay)
+            .padding(.horizontal, isFullscreen ? 0 : 1)
+            //.overlay(loadingOverlay)
             .onTapGesture(count: 2) {
                 toggleFullscreen()
             }
@@ -255,10 +255,10 @@ struct ContentView: View {
     
     private func carregarConfiguracoes() {
         if certificateURL.isEmpty {
-            certificateURL = "https://seu-servidor.com/certificate.der"
+            certificateURL = "https://seu.com/certificate"
         }
         if licenseURL.isEmpty {
-            licenseURL = "https://seu-servidor.com/license"
+            licenseURL = "https://seu.com/license"
         }
     }
     
