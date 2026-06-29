@@ -7,13 +7,20 @@ class CanaisViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var selectedCanal: Canal?
     
-    // ✅ Mude de 'private' para 'internal' ou 'public'
-    internal var service: CanaisService  // ← AGORA É ACESSÍVEL
+    internal var service: CanaisService
     private var cancellables = Set<AnyCancellable>()
     
     init(canaisURL: String) {
         self.service = CanaisService(canaisURL: canaisURL)
         setupBindings()
+    }
+    
+    // ✅ MÉTODO PARA VERIFICAR E ATUALIZAR URL
+    func verificarEAtualizarURL(_ novaURL: String) {
+        if service.canaisURL != novaURL {
+            service.atualizarURL(novaURL)
+            service.carregarCanais()
+        }
     }
     
     func atualizarURL(_ novaURL: String) {
