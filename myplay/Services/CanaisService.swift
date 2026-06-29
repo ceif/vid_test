@@ -1,21 +1,32 @@
 import Foundation
-import Combine
 
 class CanaisService: ObservableObject {
     @Published var canais: [Canal] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    private let canaisURL = "http://myney/canais.json"
+    // ✅ Agora recebe a URL por parâmetro
+    private var canaisURL: String
+    
+    init(canaisURL: String) {
+        self.canaisURL = canaisURL
+    }
+    
+    // ✅ Método para atualizar a URL
+    func atualizarURL(_ novaURL: String) {
+        canaisURL = novaURL
+    }
     
     func carregarCanais() {
         guard let url = URL(string: canaisURL) else {
-            errorMessage = "URL inválida"
+            errorMessage = "URL inválida: \(canaisURL)"
             return
         }
         
         isLoading = true
         errorMessage = nil
+        
+        print("📡 A carregar canais de: \(canaisURL)")
         
         URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
             DispatchQueue.main.async {
@@ -29,6 +40,11 @@ class CanaisService: ObservableObject {
                 guard let data = data else {
                     self?.errorMessage = "Dados não recebidos"
                     return
+                }
+                
+                // Debug: Mostra o JSON recebido
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("📡 JSON recebido: \(jsonString.prefix(200))...")
                 }
                 
                 do {
