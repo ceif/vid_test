@@ -15,9 +15,9 @@ struct CanalGridView: View {
         VStack(alignment: .leading, spacing: 12) {
             // Título
             HStack {
-                Text("📺 Canais")
-                    .font(.headline)
-                    .fontWeight(.bold)
+              //  Text("📺 Canais")
+             //       .font(.headline)
+             //       .fontWeight(.bold)
                 
                 Spacer()
                 
