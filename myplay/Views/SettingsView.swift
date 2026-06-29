@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct SettingsView: View {
+    // MARK: - Configurações
+    @AppStorage("canaisURL") private var canaisURL = "http://myney/canais.json"
     @AppStorage("certificateURL") private var certificateURL = ""
     @AppStorage("licenseURL") private var licenseURL = ""
     @AppStorage("authToken") private var authToken = ""
@@ -12,22 +14,40 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Configurações DRM") {
+                // ✅ SECÇÃO: URL dos Canais
+                Section("📡 URL dos Canais") {
+                    TextField("URL do JSON dos canais", text: $canaisURL)
+                        .autocapitalization(.none)
+                        .keyboardType(.URL)
+                        .textContentType(.URL)
+                        .disableAutocorrection(true)
+                    
+                    Text("Exemplo: http://meuservidor.com/canais.json")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                // ✅ SECÇÃO: Configurações DRM
+                Section("🔐 Configurações DRM") {
                     TextField("URL do Certificado", text: $certificateURL)
                         .autocapitalization(.none)
                         .keyboardType(.URL)
                         .textContentType(.URL)
+                        .disableAutocorrection(true)
                     
                     TextField("URL da Licença", text: $licenseURL)
                         .autocapitalization(.none)
                         .keyboardType(.URL)
                         .textContentType(.URL)
+                        .disableAutocorrection(true)
                     
                     SecureField("Token de Autenticação", text: $authToken)
                         .autocapitalization(.none)
+                        .disableAutocorrection(true)
                 }
                 
-                Section("Informação") {
+                // ✅ SECÇÃO: Informação
+                Section("ℹ️ Informação") {
                     HStack {
                         Text("Versão da App")
                         Spacer()
@@ -43,8 +63,10 @@ struct SettingsView: View {
                     }
                 }
                 
+                // ✅ SECÇÃO: Ações
                 Section {
                     Button("Restaurar Padrões") {
+                        canaisURL = "http://myney/canais.json"
                         certificateURL = ""
                         licenseURL = ""
                         authToken = ""
