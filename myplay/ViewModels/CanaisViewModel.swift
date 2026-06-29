@@ -7,11 +7,22 @@ class CanaisViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var selectedCanal: Canal?
     
-    private let service = CanaisService()
+    private var service: CanaisService
     private var cancellables = Set<AnyCancellable>()
     
-    init() {
-        // Sincroniza com o service
+    // ✅ Recebe a URL do JSON
+    init(canaisURL: String) {
+        self.service = CanaisService(canaisURL: canaisURL)
+        setupBindings()
+    }
+    
+    // ✅ Método para atualizar a URL e recarregar
+    func atualizarURL(_ novaURL: String) {
+        service.atualizarURL(novaURL)
+        service.carregarCanais()
+    }
+    
+    private func setupBindings() {
         service.$canais
             .assign(to: \.canais, on: self)
             .store(in: &cancellables)
