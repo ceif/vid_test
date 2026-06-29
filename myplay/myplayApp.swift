@@ -25,13 +25,22 @@ class OrientationManager: ObservableObject {
     }
 }
 
-// ✅ CORRIGIDO: UIViewController extension
+// ✅ CORRIGIDO: UIViewController extension - SEM OVERRIDE
 extension UIViewController {
-    open override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+    // ✅ Usa @objc dynamic para permitir substituição em tempo de execução
+    @objc dynamic var supportedInterfaceOrientations: UIInterfaceOrientationMask {
         return OrientationManager.shared.orientationLock
     }
     
-    open override var shouldAutorotate: Bool {
+    @objc dynamic var shouldAutorotate: Bool {
         return true
+    }
+}
+
+// ✅ CORRIGIDO: SceneDelegate ou AppDelegate para iOS 15/16
+// Se estiver a usar AppDelegate, adicione este método
+class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        return OrientationManager.shared.orientationLock
     }
 }
