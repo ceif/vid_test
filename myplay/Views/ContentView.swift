@@ -2,9 +2,6 @@ import SwiftUI
 import AVKit
 import Combine
 
-// ✅ REMOVER A EXTENSÃO UIApplication ANTIGA
-// (Já não é necessária porque usamos o OrientationManager)
-
 struct ContentView: View {
     // MARK: - Estado
     @State private var player: AVPlayer?
@@ -23,7 +20,7 @@ struct ContentView: View {
     @StateObject private var canaisViewModel: CanaisViewModel
     
     // MARK: - UserDefaults para configurações
-    @AppStorage("canaisURL") private var canaisURL = "http://192.168.5.2/app/canais.json"
+    @AppStorage("canaisURL") private var canaisURL = "http://myney/canais.json"
     @AppStorage("certificateURL") private var certificateURL = ""
     @AppStorage("licenseURL") private var licenseURL = ""
     @AppStorage("authToken") private var authToken = ""
@@ -34,7 +31,7 @@ struct ContentView: View {
     
     // MARK: - Inicialização
     init() {
-        let url = UserDefaults.standard.string(forKey: "canaisURL") ?? "http://192.168.5.2/app/canais.json"
+        let url = UserDefaults.standard.string(forKey: "canaisURL") ?? "http://myney/canais.json"
         _canaisViewModel = StateObject(wrappedValue: CanaisViewModel(canaisURL: url))
     }
     
@@ -46,10 +43,10 @@ struct ContentView: View {
                     playerView(height: geometry.size.height)
                     
                     // ✅ CONTROLES
-                    //controlsView
+                    controlsView
                     
                     Divider()
-                        .padding(.vertical, 4)
+                        .padding(.vertical, 8)
                     
                     // Grid de Canais
                     CanalGridView(
@@ -58,9 +55,9 @@ struct ContentView: View {
                             selecionarCanal(canal)
                         }
                     )
-                    .padding(.top, 2)
+                    .padding(.top, 4)
                 }
-                //.navigationTitle("📺 TV")
+                .navigationTitle("📺 TV")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -72,7 +69,7 @@ struct ContentView: View {
                 .sheet(isPresented: $showSettings) {
                     SettingsView()
                         .onDisappear {
-                            let novaURL = UserDefaults.standard.string(forKey: "canaisURL") ?? "http://192.168.5.2/app/canais.json"
+                            let novaURL = UserDefaults.standard.string(forKey: "canaisURL") ?? "http://myney/canais.json"
                             canaisViewModel.verificarEAtualizarURL(novaURL)
                             
                             if let canal = selectedCanal {
@@ -99,10 +96,10 @@ struct ContentView: View {
                 .onChange(of: isFullscreen) { newValue in
                     if newValue {
                         // ✅ Permite todas as orientações em fullscreen
-                        OrientationManager.shared.lockOrientation(.all)
+                        OrientationManager.lockOrientation(.all)
                     } else {
                         // ✅ Volta para portrait
-                        OrientationManager.shared.lockOrientation(.portrait)
+                        OrientationManager.lockOrientation(.portrait)
                     }
                 }
             }
@@ -121,8 +118,8 @@ struct ContentView: View {
                 isLoading: isLoading
             )
             .frame(height: playerHeight)
-            .padding(.horizontal, isFullscreen ? 0 : 0)
-            //.overlay(loadingOverlay)
+            .padding(.horizontal, isFullscreen ? 0 : 16)
+            .overlay(loadingOverlay)
             .onTapGesture(count: 2) {
                 toggleFullscreen()
             }
@@ -214,16 +211,15 @@ struct ContentView: View {
         withAnimation(.easeInOut(duration: 0.3)) {
             isFullscreen.toggle()
             
-            // ✅ Força a orientação
+            // ✅ Usa o OrientationManager para controlar orientação
             if isFullscreen {
-                // ✅ Tenta forçar landscape
-                OrientationManager.shared.lockOrientation(.all)
-                
-                // ✅ Força a mudança de orientação
+                // ✅ Permite todas as orientações
+                OrientationManager.lockOrientation(.all)
+                // ✅ Força landscape
                 UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
             } else {
                 // ✅ Volta para portrait
-                OrientationManager.shared.lockOrientation(.portrait)
+                OrientationManager.lockOrientation(.portrait)
                 UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
             }
             
@@ -236,10 +232,10 @@ struct ContentView: View {
     
     private func carregarConfiguracoes() {
         if certificateURL.isEmpty {
-            certificateURL = "https://seu.com/certificate"
+            certificateURL = "https://seu-servidor.com/certificate.der"
         }
         if licenseURL.isEmpty {
-            licenseURL = "https://seu.com/license"
+            licenseURL = "https://seu-servidor.com/license"
         }
     }
     
@@ -397,9 +393,150 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Delegate FairPlay (mesmo código - manter igual)
+// MARK: - Delegate FairPlay (manter igual)
 class SimpleFairPlayDelegate: NSObject, AVContentKeySessionDelegate {
-    // ... (mesmo código existente) ...
+    private let certificateURL: URL
+    private let licenseURL: URL
+    private let authToken: String
+    private let urlSession: URLSession
+    
+    init(certificateURL: URL, licenseURL: URL, authToken: String) {
+        self.certificateURL = certificateURL
+        self.licenseURL = licenseURL
+        self.authToken = authToken
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30
+        config.timeoutIntervalForResource = 60
+        self.urlSession = URLSession(configuration: config)
+        
+        super.init()
+    }
+    
+    func contentKeySession(_ session: AVContentKeySession, didProvide keyRequest: AVContentKeyRequest) {
+        guard let contentIdentifier = keyRequest.identifier as? String else {
+            print("❌ Sem identificador de conteúdo")
+            keyRequest.processContentKeyResponseError(
+                NSError(domain: "FairPlay", code: -1, userInfo: [NSLocalizedDescriptionKey: "Sem identificador"])
+            )
+            return
+        }
+        
+        print("🔑 Solicitando chave para: \(contentIdentifier.prefix(50))...")
+        
+        Task { [weak self] in
+            guard let self = self else { return }
+            
+            do {
+                let certificateData = try Data(contentsOf: self.certificateURL)
+                print("📜 Certificado carregado: \(certificateData.count) bytes")
+                
+                let contentIdentifierData = contentIdentifier.data(using: .utf8)!
+                let spcData = try await keyRequest.makeStreamingContentKeyRequestData(
+                    forApp: certificateData,
+                    contentIdentifier: contentIdentifierData,
+                    options: nil
+                )
+                print("✅ SPC criado: \(spcData.count) bytes")
+                
+                let responseData = try await self.sendSPCToLicenseServer(spcData: spcData)
+                print("✅ Resposta recebida: \(responseData.count) bytes")
+                
+                let ckcData = try self.extractCKCFromResponse(responseData)
+                print("✅ CKC extraído: \(ckcData.count) bytes")
+                
+                await MainActor.run {
+                    let keyResponse = AVContentKeyResponse(fairPlayStreamingKeyResponseData: ckcData)
+                    keyRequest.processContentKeyResponse(keyResponse)
+                }
+                
+            } catch {
+                print("❌ Erro no processo de licença: \(error)")
+                await MainActor.run {
+                    keyRequest.processContentKeyResponseError(error)
+                }
+            }
+        }
+    }
+    
+    private func sendSPCToLicenseServer(spcData: Data) async throws -> Data {
+        var request = URLRequest(url: licenseURL)
+        request.httpMethod = "POST"
+        request.httpBody = spcData
+        
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        
+        if !authToken.isEmpty {
+            request.setValue(authToken, forHTTPHeaderField: "nv-authorizations")
+        }
+        
+        print("📡 Enviando SPC para: \(licenseURL)")
+        
+        let (data, response) = try await urlSession.data(for: request)
+        
+        if let httpResponse = response as? HTTPURLResponse {
+            print("📡 Status Code: \(httpResponse.statusCode)")
+            
+            guard httpResponse.statusCode == 200 else {
+                let errorMessage = String(data: data, encoding: .utf8) ?? "Erro desconhecido"
+                throw NSError(
+                    domain: "FairPlay",
+                    code: httpResponse.statusCode,
+                    userInfo: [NSLocalizedDescriptionKey: "Servidor retornou erro \(httpResponse.statusCode): \(errorMessage)"]
+                )
+            }
+        }
+        
+        guard !data.isEmpty else {
+            throw NSError(
+                domain: "FairPlay",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "Resposta do servidor vazia"]
+            )
+        }
+        
+        return data
+    }
+    
+    private func extractCKCFromResponse(_ data: Data) throws -> Data {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            print("📡 Resposta não é JSON, assumindo dados binários")
+            return data
+        }
+        
+        print("📡 Resposta é JSON")
+        
+        if let ckcMessage = json["CkcMessage"] as? String {
+            print("📡 Encontrado campo 'CkcMessage'")
+            
+            guard let ckcData = Data(base64Encoded: ckcMessage) else {
+                print("❌ Erro ao decodificar Base64 do CkcMessage")
+                throw NSError(
+                    domain: "FairPlay",
+                    code: -2,
+                    userInfo: [NSLocalizedDescriptionKey: "CkcMessage não é um Base64 válido"]
+                )
+            }
+            
+            print("✅ CKC decodificado do Base64: \(ckcData.count) bytes")
+            return ckcData
+        }
+        
+        let possibleKeys = ["license", "ckc", "key", "contentKey", "data", "payload"]
+        for key in possibleKeys {
+            if let value = json[key] as? String {
+                print("📡 Tentando campo alternativo '\(key)'")
+                if let ckcData = Data(base64Encoded: value) {
+                    print("✅ CKC decodificado do campo '\(key)': \(ckcData.count) bytes")
+                    return ckcData
+                }
+            }
+        }
+        
+        print("⚠️ Nenhum campo de CKC encontrado, retornando JSON inteiro")
+        return data
+    }
 }
 
 // MARK: - Preview
