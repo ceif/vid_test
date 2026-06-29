@@ -2,6 +2,15 @@ import SwiftUI
 import AVKit
 import Combine
 
+// ✅ EXTENSÃO PARA CONTROLAR ORIENTAÇÃO
+extension UIApplication {
+    static var orientationLock = UIInterfaceOrientationMask.portrait
+    
+    func setOrientationLock(_ lock: UIInterfaceOrientationMask) {
+        UIApplication.orientationLock = lock
+    }
+}
+
 struct ContentView: View {
     // MARK: - Estado
     @State private var player: AVPlayer?
@@ -14,6 +23,7 @@ struct ContentView: View {
     @State private var isReady = false
     @State private var isLoading = false
     @State private var showSettings = false
+    @State private var isFullscreen = false
     
     // MARK: - ViewModels
     @StateObject private var canaisViewModel: CanaisViewModel
@@ -30,7 +40,6 @@ struct ContentView: View {
     
     // MARK: - Inicialização
     init() {
-        // ✅ Inicializa o ViewModel com a URL dos canais
         let url = UserDefaults.standard.string(forKey: "canaisURL") ?? "http://myney/canais.json"
         _canaisViewModel = StateObject(wrappedValue: CanaisViewModel(canaisURL: url))
     }
@@ -38,25 +47,37 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Player
+                // ✅ PLAYER NATIVO COM SUPORTE A PiP E FULLSCREEN
                 if let player = player {
-                    VideoPlayer(player: player)
-                        .frame(height: UIScreen.main.bounds.height * 0.35)
-                        .padding(.horizontal)
-                        .overlay(
-                            Group {
-                                if isLoading || !isReady {
-                                    VStack(spacing: 12) {
-                                        ProgressView()
-                                            .scaleEffect(1.5)
-                                        Text(isLoading ? "A obter licença..." : "A carregar...")
-                                            .font(.caption)
-                                            .foregroundColor(.white)
-                                    }
-                                    .padding(20)
+                    PlayerViewController(
+                        player: player,
+                        isReady: isReady,
+                        isLoading: isLoading
+                    )
+                    .frame(height: isFullscreen ? UIScreen.main.bounds.height : UIScreen.main.bounds.height * 0.35)
+                    .padding(.horizontal, isFullscreen ? 0 : 16)
+                    .overlay(
+                        // ✅ INDICADOR DE CARREGAMENTO
+                        Group {
+                            if isLoading || !isReady {
+                                VStack(spacing: 12) {
+                                    ProgressView()
+                                        .scaleEffect(1.5)
+                                        .tint(.white)
+                                    Text(isLoading ? "A obter licença..." : "A carregar...")
+                                        .font(.caption)
+                                        .foregroundColor(.white)
                                 }
+                                .padding(20)
+                                .background(Color.black.opacity(0.7))
+                                .cornerRadius(12)
                             }
-                        )
+                        }
+                    )
+                    .onTapGesture(count: 2) {
+                        // ✅ DUPLO TOQUE PARA FULLSCREEN
+                        toggleFullscreen()
+                    }
                 } else {
                     VStack(spacing: 16) {
                         Image(systemName: "tv")
@@ -72,9 +93,10 @@ struct ContentView: View {
                     .padding(.horizontal)
                 }
                 
-                // Botão de Play/Pause
+                // ✅ CONTROLES DO PLAYER (apenas se houver player)
                 if player != nil {
                     HStack {
+                        // Botão Play/Pause
                         Button(action: togglePlayPause) {
                             HStack {
                                 Image(systemName: isPlaying ? "pause.fill" : "play.fill")
@@ -82,7 +104,7 @@ struct ContentView: View {
                             }
                             .font(.headline)
                             .foregroundColor(.white)
-                            .padding(.horizontal, 24)
+                            .padding(.horizontal, 20)
                             .padding(.vertical, 10)
                             .background(isReady ? Color.blue : Color.gray)
                             .cornerRadius(25)
@@ -91,12 +113,21 @@ struct ContentView: View {
                         
                         Spacer()
                         
+                        // ✅ Nome do canal
                         if let canal = selectedCanal {
                             Text("📺 \(canal.nome)")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .padding(.trailing, 8)
                         }
+                        
+                        // ✅ BOTÃO DE FULLSCREEN
+                        Button(action: toggleFullscreen) {
+                            Image(systemName: isFullscreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                                .font(.system(size: 22))
+                                .foregroundColor(.blue)
+                        }
+                        .padding(.trailing, 8)
                     }
                     .padding(.horizontal)
                     .padding(.top, 8)
@@ -126,13 +157,9 @@ struct ContentView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsView()
                     .onDisappear {
-                        // ✅ Recarrega os canais se a URL foi alterada
                         let novaURL = UserDefaults.standard.string(forKey: "canaisURL") ?? "http://myney/canais.json"
-                        if canaisViewModel.service.canaisURL != novaURL {
-                            canaisViewModel.atualizarURL(novaURL)
-                        }
+                        canaisViewModel.verificarEAtualizarURL(novaURL)
                         
-                        // Recarrega o player com novas configurações
                         if let canal = selectedCanal {
                             reloadPlayer(with: canal)
                         }
@@ -153,10 +180,37 @@ struct ContentView: View {
                 fairPlayDelegate = nil
                 cancellables.removeAll()
             }
+            // ✅ SUPORTA ORIENTAÇÃO EM FULLSCREEN
+            .onChange(of: isFullscreen) { newValue in
+                if newValue {
+                    UIApplication.orientationLock = .all
+                } else {
+                    UIApplication.orientationLock = .portrait
+                }
+            }
         }
     }
     
     // MARK: - Funções
+    
+    // ✅ TOGGLE FULLSCREEN
+    private func toggleFullscreen() {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            isFullscreen.toggle()
+            
+            // ✅ Muda a orientação
+            if isFullscreen {
+                // Força landscape
+                UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
+            } else {
+                // Volta para portrait
+                UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
+            }
+            
+            // ✅ Atualiza a UI
+            UIViewController.attemptRotationToDeviceOrientation()
+        }
+    }
     
     private func carregarConfiguracoes() {
         if certificateURL.isEmpty {
@@ -321,7 +375,7 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Delegate FairPlay
+// MARK: - Delegate FairPlay (mesmo código existente)
 class SimpleFairPlayDelegate: NSObject, AVContentKeySessionDelegate {
     private let certificateURL: URL
     private let licenseURL: URL
