@@ -16,9 +16,10 @@ struct ContentView: View {
     @State private var showSettings = false
     
     // MARK: - ViewModels
-    @StateObject private var canaisViewModel = CanaisViewModel()
+    @StateObject private var canaisViewModel: CanaisViewModel
     
     // MARK: - UserDefaults para configurações
+    @AppStorage("canaisURL") private var canaisURL = "http://myney/canais.json"
     @AppStorage("certificateURL") private var certificateURL = ""
     @AppStorage("licenseURL") private var licenseURL = ""
     @AppStorage("authToken") private var authToken = ""
@@ -26,6 +27,13 @@ struct ContentView: View {
     // MARK: - Canal selecionado
     @State private var selectedCanal: Canal?
     @State private var currentVideoURL: String = ""
+    
+    // MARK: - Inicialização
+    init() {
+        // ✅ Inicializa o ViewModel com a URL dos canais
+        let url = UserDefaults.standard.string(forKey: "canaisURL") ?? "http://myney/canais.json"
+        _canaisViewModel = StateObject(wrappedValue: CanaisViewModel(canaisURL: url))
+    }
     
     var body: some View {
         NavigationStack {
@@ -118,6 +126,13 @@ struct ContentView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsView()
                     .onDisappear {
+                        // ✅ Recarrega os canais se a URL foi alterada
+                        let novaURL = UserDefaults.standard.string(forKey: "canaisURL") ?? "http://myney/canais.json"
+                        if canaisViewModel.service.canaisURL != novaURL {
+                            canaisViewModel.atualizarURL(novaURL)
+                        }
+                        
+                        // Recarrega o player com novas configurações
                         if let canal = selectedCanal {
                             reloadPlayer(with: canal)
                         }
