@@ -19,7 +19,7 @@ struct PlayerViewController: UIViewControllerRepresentable {
     //    }
         
         // ✅ CONFIGURAÇÕES VISUAIS
-        controller.videoGravity = .resizeAspect
+        controller.videoGravity = .resize
         controller.showsPlaybackControls = true
         
         // ✅ PERMITE FULLSCREEN
