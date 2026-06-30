@@ -84,17 +84,7 @@ struct ContentView: View {
                 }
                 .onAppear {
                     carregarConfiguracoes()
-                    canaisViewModel.carregarCanais()
-        if AVPictureInPictureController.isPictureInPictureSupported() {
-            let source = AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: sampleBufferDisplayView.sampleBufferDisplayLayer,
-                                                                    playbackDelegate: self)
-            let pipController = AVPictureInPictureController(contentSource: source)
-            pipController.canStartPictureInPictureAutomaticallyFromInline = true
-            pipController.setValue(1, forKey: "controlsStyle")
-            self.pipController = pipController
-        }
-
-                    
+                    canaisViewModel.carregarCanais()                    
                 }
                 .onDisappear {
                     player?.pause()
