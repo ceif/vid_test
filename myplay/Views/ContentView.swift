@@ -199,14 +199,6 @@ struct ContentView: View {
                         .foregroundColor(.blue)
                 }
                 .padding(.trailing, 8)
-
-                // Adicione este botão nos controlsView
-                Button(action: startPictureInPicture) {
-                    Image(systemName: "pip.enter")
-                        .font(.system(size: 22))
-                        .foregroundColor(.green)
-                }
-                .disabled(!isReady)
             }
             .padding(.horizontal)
             .padding(.top, 8)
@@ -215,41 +207,7 @@ struct ContentView: View {
     
     // MARK: - Funções
 
-// Função para iniciar PiP manualmente
-private func startPictureInPicture() {
-    guard let player = player else { return }
-    
-    // ✅ Procura o AVPlayerViewController na hierarquia
-    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-       let window = windowScene.windows.first,
-       let rootVC = window.rootViewController {
-        
-        // ✅ Encontra o AVPlayerViewController
-        if let playerVC = findAVPlayerViewController(in: rootVC) {
-            // ✅ Inicia PiP
-            if #available(iOS 14.2, *) {
-                // Para iOS 14.2+, usa o método automático
-                playerVC.canStartPictureInPictureAutomaticallyFromInline = true
-            }
-        }
-    }
-}
-
-// Função auxiliar para encontrar o AVPlayerViewController
-private func findAVPlayerViewController(in viewController: UIViewController) -> AVPlayerViewController? {
-    if let playerVC = viewController as? AVPlayerViewController {
-        return playerVC
-    }
-    for child in viewController.children {
-        if let found = findAVPlayerViewController(in: child) {
-            return found
-        }
-    }
-    return nil
-}
-
-    
-    
+     
     private func toggleFullscreen() {
         withAnimation(.easeInOut(duration: 0.3)) {
             isFullscreen.toggle()
