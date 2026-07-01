@@ -6,6 +6,7 @@ class CanaisViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var selectedCanal: Canal?
+    @Published var isFromCache = false
     
     internal var service: CanaisService
     private var cancellables = Set<AnyCancellable>()
@@ -15,7 +16,6 @@ class CanaisViewModel: ObservableObject {
         setupBindings()
     }
     
-    // ✅ MÉTODO PARA VERIFICAR E ATUALIZAR URL
     func verificarEAtualizarURL(_ novaURL: String) {
         if service.canaisURL != novaURL {
             service.atualizarURL(novaURL)
@@ -40,6 +40,10 @@ class CanaisViewModel: ObservableObject {
         service.$errorMessage
             .assign(to: \.errorMessage, on: self)
             .store(in: &cancellables)
+        
+        service.$isFromCache
+            .assign(to: \.isFromCache, on: self)
+            .store(in: &cancellables)
     }
     
     func carregarCanais() {
@@ -48,5 +52,15 @@ class CanaisViewModel: ObservableObject {
     
     func selecionarCanal(_ canal: Canal) {
         selectedCanal = canal
+    }
+    
+    // ✅ LIMPA O CACHE
+    func limparCache() {
+        service.limparCache()
+    }
+    
+    // ✅ VERIFICA SE HÁ CACHE
+    func temCache() -> Bool {
+        return service.temCache()
     }
 }
