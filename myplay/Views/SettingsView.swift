@@ -46,6 +46,23 @@ struct SettingsView: View {
                         .disableAutocorrection(true)
                 }
                 
+                // ✅ SECÇÃO: Cache
+                Section("💾 Cache") {
+                    Button("Limpar Cache") {
+                        // ✅ Acede ao ViewModel para limpar cache
+                        // Nota: Precisamos de uma forma de aceder ao ViewModel
+                        // Vamos usar NotificationCenter ou um Singleton
+                        NotificationCenter.default.post(name: .limparCache, object: nil)
+                        showAlert = true
+                        alertMessage = "Cache limpo com sucesso"
+                    }
+                    .foregroundColor(.red)
+                    
+                    Text("Os canais são guardados localmente para quando o servidor estiver indisponível")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
                 // ✅ SECÇÃO: Informação
                 Section("ℹ️ Informação") {
                     HStack {
@@ -90,6 +107,34 @@ struct SettingsView: View {
             } message: {
                 Text(alertMessage)
             }
+            .onAppear {
+                // ✅ Observa notificação de limpeza de cache
+                NotificationCenter.default.addObserver(
+                    forName: .limparCache,
+                    object: nil,
+                    queue: .main
+                ) { _ in
+                    // ✅ Acede ao ViewModel através do environment ou singleton
+                    // Como alternativa, podemos usar um Singleton
+                    CacheManager.shared.limparCache()
+                }
+            }
         }
+    }
+}
+
+// ✅ NOTIFICAÇÃO PARA LIMPAR CACHE
+extension Notification.Name {
+    static let limparCache = Notification.Name("limparCache")
+}
+
+// ✅ SINGLETON PARA GERIR CACHE GLOBALMENTE
+class CacheManager {
+    static let shared = CacheManager()
+    
+    private let service = CanaisService(canaisURL: UserDefaults.standard.string(forKey: "canaisURL") ?? "http://myney/canais.json")
+    
+    func limparCache() {
+        service.limparCache()
     }
 }
