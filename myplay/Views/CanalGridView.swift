@@ -13,35 +13,61 @@ struct CanalGridView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Título
+            // ✅ TÍTULO COM INDICADOR DE CACHE
             HStack {
-              //  Text("📺 Canais")
-             //       .font(.headline)
-             //       .fontWeight(.bold)
+                Text("📺 Canais")
+                    .font(.headline)
+                    .fontWeight(.bold)
                 
-                Spacer()
+                // ✅ INDICADOR DE CACHE
+                if viewModel.isFromCache {
+                    Image(systemName: "icloud.slash")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                        .help("A usar dados em cache")
+                }
                 
                 if viewModel.isLoading {
                     ProgressView()
                         .scaleEffect(0.8)
                 }
+                
+                Spacer()
+                
+                // ✅ BOTÃO PARA RECARREGAR
+                Button(action: {
+                    viewModel.carregarCanais()
+                }) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                }
             }
             .padding(.horizontal)
             
+            // ✅ MENSAGEM DE ERRO/CACHE
             if let error = viewModel.errorMessage {
                 VStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.largeTitle)
-                        .foregroundColor(.orange)
-                    Text(error)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
+                    HStack {
+                        Image(systemName: viewModel.isFromCache ? "icloud.slash" : "exclamationmark.triangle")
+                            .foregroundColor(viewModel.isFromCache ? .orange : .red)
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(viewModel.isFromCache ? .orange : .secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    
+                    if viewModel.isFromCache {
+                        Text("Os canais estão a ser carregados da memória local")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
                     
                     Button("Tentar Novamente") {
                         viewModel.carregarCanais()
                     }
                     .buttonStyle(.bordered)
+                    .controlSize(.small)
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
