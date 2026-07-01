@@ -83,6 +83,8 @@ struct ContentView: View {
                     Text(errorMessage)
                 }
                 .onAppear {
+                    _ = CacheManager.shared
+                    
                     carregarConfiguracoes()
                     canaisViewModel.carregarCanais()                    
                 }
